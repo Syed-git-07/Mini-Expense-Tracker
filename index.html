@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ledger — Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #f0eee6;
+        --paper-raised: #f7f5ef;
+        --ink: #16201b;
+        --ink-soft: #5b655c;
+        --line: #d9d5c7;
+        --emerald: #1f6f54;
+        --emerald-dim: #e4eee9;
+        --rust: #a6472e;
+        --rust-dim: #f5e7e2;
+        --gold: #b08d57;
+        --radius: 2px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Inter", sans-serif;
+        min-height: 100vh;
+        background-image: linear-gradient(var(--line) 1px, transparent 1px);
+        background-size: 100% 42px;
+        background-position: 0 220px;
+      }
+      .wrap {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 0 24px 80px;
+      }
+
+      /* Header / masthead */
+      header {
+        padding: 48px 0 28px;
+        border-bottom: 2px solid var(--ink);
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .masthead h1 {
+        font-family: "Fraunces", serif;
+        font-weight: 600;
+        font-size: 2.6rem;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+      .masthead p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 0.92rem;
+        font-style: italic;
+        font-family: "Fraunces", serif;
+      }
+      .balance-block {
+        text-align: right;
+      }
+      .balance-label {
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        margin-bottom: 2px;
+      }
+      .balance-value {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 2.1rem;
+        font-weight: 600;
+        color: var(--rust);
+        line-height: 1;
+      }
+      .balance-count {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.78rem;
+        color: var(--ink-soft);
+        margin-top: 6px;
+      }
+
+      /* Summary strip */
+      .summary-strip {
+        display: flex;
+        gap: 0;
+        margin: 28px 0 36px;
+        border: 1px solid var(--line);
+        background: var(--paper-raised);
+        overflow-x: auto;
+      }
+      .summary-item {
+        flex: 1 1 0;
+        min-width: 110px;
+        padding: 14px 16px;
+        border-right: 1px solid var(--line);
+      }
+      .summary-item:last-child {
+        border-right: none;
+      }
+      .summary-item .k {
+        font-size: 0.68rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        display: block;
+        margin-bottom: 4px;
+      }
+      .summary-item .v {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 600;
+        font-size: 1rem;
+      }
+
+      /* New entry form */
+      .entry-card {
+        border: 1px solid var(--ink);
+        background: var(--paper-raised);
+        padding: 22px 22px 18px;
+        margin-bottom: 40px;
+        position: relative;
+      }
+      .entry-card::before {
+        content: "NEW ENTRY";
+        position: absolute;
+        top: -11px;
+        left: 18px;
+        background: var(--paper);
+        padding: 0 8px;
+        font-size: 0.68rem;
+        letter-spacing: 0.14em;
+        color: var(--emerald);
+        font-weight: 600;
+      }
+      form {
+        display: grid;
+        grid-template-columns: 1.6fr 1fr 1fr 1fr auto;
+        gap: 12px;
+        align-items: end;
+      }
+      @media (max-width: 720px) {
+        form {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      label {
+        display: block;
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        margin-bottom: 6px;
+      }
+      input,
+      select {
+        width: 100%;
+        font-family: "Inter", sans-serif;
+        font-size: 0.92rem;
+        padding: 9px 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        color: var(--ink);
+      }
+      input:focus,
+      select:focus,
+      button:focus {
+        outline: 2px solid var(--emerald);
+        outline-offset: 1px;
+      }
+      input[type="number"] {
+        font-family: "JetBrains Mono", monospace;
+      }
+      button {
+        cursor: pointer;
+        border: none;
+        border-radius: var(--radius);
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .btn-primary {
+        background: var(--ink);
+        color: var(--paper);
+        padding: 10px 18px;
+        white-space: nowrap;
+      }
+      .btn-primary:hover {
+        background: var(--emerald);
+      }
+      .form-error {
+        color: var(--rust);
+        font-size: 0.8rem;
+        margin-top: 10px;
+        display: none;
+      }
+
+      /* Filters */
+      .filters {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .filters select,
+      .filters input {
+        width: auto;
+        font-size: 0.82rem;
+        padding: 7px 9px;
+      }
+      .filters .tag-btn {
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 6px 10px;
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--ink-soft);
+      }
+      .filters .tag-btn.active {
+        border-color: var(--emerald);
+        color: var(--emerald);
+        background: var(--emerald-dim);
+      }
+
+      /* Ledger table */
+      .ledger-head {
+        display: grid;
+        grid-template-columns: 100px 1fr 130px 110px 32px;
+        gap: 12px;
+        padding: 8px 4px;
+        font-size: 0.68rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        border-bottom: 1px solid var(--ink);
+      }
+      .ledger-row {
+        display: grid;
+        grid-template-columns: 100px 1fr 130px 110px 32px;
+        gap: 12px;
+        padding: 14px 4px;
+        border-bottom: 1px solid var(--line);
+        align-items: center;
+      }
+      .ledger-row:hover {
+        background: rgba(31, 111, 84, 0.04);
+      }
+      .cell-date {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.78rem;
+        color: var(--ink-soft);
+      }
+      .cell-desc {
+        font-size: 0.92rem;
+      }
+      .cell-desc .tag {
+        display: inline-block;
+        margin-top: 4px;
+        font-size: 0.64rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border: 1px solid var(--gold);
+        color: var(--gold);
+        border-radius: 20px;
+      }
+      .cell-amount {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 600;
+        text-align: right;
+        color: var(--rust);
+      }
+      .cell-del {
+        background: transparent;
+        color: var(--ink-soft);
+        font-size: 1rem;
+        line-height: 1;
+        padding: 4px;
+      }
+      .cell-del:hover {
+        color: var(--rust);
+      }
+      .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        color: var(--ink-soft);
+        font-family: "Fraunces", serif;
+        font-style: italic;
+        font-size: 1.05rem;
+        border-bottom: 1px solid var(--line);
+      }
+      @media (max-width: 640px) {
+        .ledger-head {
+          display: none;
+        }
+        .ledger-row {
+          grid-template-columns: 1fr auto;
+          grid-template-areas:
+            "date del"
+            "desc desc"
+            "amount amount";
+          row-gap: 6px;
+        }
+        .cell-date {
+          grid-area: date;
+        }
+        .cell-del {
+          grid-area: del;
+        }
+        .cell-desc {
+          grid-area: desc;
+        }
+        .cell-amount {
+          grid-area: amount;
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="masthead">
+          <h1>The Ledger</h1>
+          <p>a running account of where it went</p>
+        </div>
+        <div class="balance-block">
+          <div class="balance-label">Total Spent</div>
+          <div class="balance-value" id="totalValue">$0.00</div>
+          <div class="balance-count" id="totalCount">0 entries</div>
+        </div>
+      </header>
+
+      <div class="summary-strip" id="summaryStrip"></div>
+
+      <div class="entry-card">
+        <form id="expenseForm">
+          <div>
+            <label for="description">Description</label>
+            <input
+              type="text"
+              id="description"
+              placeholder="Coffee, rent, taxi…"
+              required
+            />
+          </div>
+          <div>
+            <label for="amount">Amount</label>
+            <input
+              type="number"
+              id="amount"
+              placeholder="0.00"
+              step="0.01"
+              min="0.01"
+              required
+            />
+          </div>
+          <div>
+            <label for="category">Category</label>
+            <select id="category"></select>
+          </div>
+          <div>
+            <label for="date">Date</label>
+            <input type="date" id="date" />
+          </div>
+          <button type="submit" class="btn-primary">Add entry</button>
+          <div class="form-error" id="formError"></div>
+        </form>
+      </div>
+
+      <div class="filters">
+        <select id="filterCategory">
+          <option value="">All categories</option>
+        </select>
+        <input
+          type="text"
+          id="filterSearch"
+          placeholder="Search description…"
+        />
+      </div>
+
+      <div class="ledger-head">
+        <div>Date</div>
+        <div>Description</div>
+        <div style="text-align: right">Amount</div>
+        <div></div>
+        <div></div>
+      </div>
+      <div id="ledgerBody"></div>
+    </div>
+
+    <script>
+      const API = "http://localhost:4000/api";
+      let CATEGORIES = [];
+      let expenses = [];
+
+      const fmtMoney = (n) =>
+        "$" +
+        Number(n).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      const fmtDate = (d) => {
+        const dt = new Date(d + "T00:00:00");
+        return dt.toLocaleDateString(undefined, {
+          month: "short",
+          day: "2-digit",
+          year: "numeric",
+        });
+      };
+
+      async function loadCategories() {
+        const res = await fetch(`${API}/categories`);
+        CATEGORIES = await res.json();
+        const catSelect = document.getElementById("category");
+        const filterSelect = document.getElementById("filterCategory");
+        CATEGORIES.forEach((c) => {
+          catSelect.insertAdjacentHTML(
+            "beforeend",
+            `<option value="${c}">${c}</option>`,
+          );
+          filterSelect.insertAdjacentHTML(
+            "beforeend",
+            `<option value="${c}">${c}</option>`,
+          );
+        });
+      }
+
+      async function loadExpenses() {
+        const category = document.getElementById("filterCategory").value;
+        const q = document.getElementById("filterSearch").value;
+        const params = new URLSearchParams();
+        if (category) params.set("category", category);
+        if (q) params.set("q", q);
+        const res = await fetch(`${API}/expenses?${params.toString()}`);
+        expenses = await res.json();
+        renderLedger();
+      }
+
+      async function loadSummary() {
+        const res = await fetch(`${API}/summary`);
+        const summary = await res.json();
+        document.getElementById("totalValue").textContent = fmtMoney(
+          summary.total,
+        );
+        document.getElementById("totalCount").textContent =
+          `${summary.count} ${summary.count === 1 ? "entry" : "entries"}`;
+
+        const strip = document.getElementById("summaryStrip");
+        strip.innerHTML = "";
+        const entries = Object.entries(summary.byCategory).sort(
+          (a, b) => b[1] - a[1],
+        );
+        if (entries.length === 0) {
+          strip.innerHTML = `<div class="summary-item"><span class="k">No spending yet</span><span class="v">—</span></div>`;
+        }
+        entries.forEach(([cat, amt]) => {
+          strip.insertAdjacentHTML(
+            "beforeend",
+            `
+      <div class="summary-item">
+        <span class="k">${cat}</span>
+        <span class="v">${fmtMoney(amt)}</span>
+      </div>
+    `,
+          );
+        });
+      }
+
+      function renderLedger() {
+        const body = document.getElementById("ledgerBody");
+        if (expenses.length === 0) {
+          body.innerHTML = `<div class="empty-state">No entries yet. Add the first line above.</div>`;
+          return;
+        }
+        body.innerHTML = expenses
+          .map(
+            (e) => `
+    <div class="ledger-row" data-id="${e.id}">
+      <div class="cell-date">${fmtDate(e.date)}</div>
+      <div class="cell-desc">${escapeHtml(e.description)}<br/><span class="tag">${e.category}</span></div>
+      <div class="cell-amount">${fmtMoney(e.amount)}</div>
+      <button class="cell-del" title="Delete entry" data-del="${e.id}">✕</button>
+    </div>
+  `,
+          )
+          .join("");
+
+        body.querySelectorAll("[data-del]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            await fetch(`${API}/expenses/${btn.dataset.del}`, {
+              method: "DELETE",
+            });
+            await Promise.all([loadExpenses(), loadSummary()]);
+          });
+        });
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      document
+        .getElementById("expenseForm")
+        .addEventListener("submit", async (ev) => {
+          ev.preventDefault();
+          const errorBox = document.getElementById("formError");
+          errorBox.style.display = "none";
+
+          const payload = {
+            description: document.getElementById("description").value,
+            amount: document.getElementById("amount").value,
+            category: document.getElementById("category").value,
+            date: document.getElementById("date").value || undefined,
+          };
+
+          const res = await fetch(`${API}/expenses`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const data = await res.json();
+            errorBox.textContent = (
+              data.errors || ["Something went wrong."]
+            ).join(", ");
+            errorBox.style.display = "block";
+            return;
+          }
+
+          document.getElementById("expenseForm").reset();
+          await Promise.all([loadExpenses(), loadSummary()]);
+        });
+
+      document
+        .getElementById("filterCategory")
+        .addEventListener("change", loadExpenses);
+      document
+        .getElementById("filterSearch")
+        .addEventListener("input", debounce(loadExpenses, 300));
+
+      function debounce(fn, wait) {
+        let t;
+        return (...args) => {
+          clearTimeout(t);
+          t = setTimeout(() => fn(...args), wait);
+        };
+      }
+
+      (async function init() {
+        document.getElementById("date").value = new Date()
+          .toISOString()
+          .slice(0, 10);
+        await loadCategories();
+        await Promise.all([loadExpenses(), loadSummary()]);
+      })();
+    </script>
+  </body>
+</html>
+
+index.html
