@@ -3,3 +3,5 @@ node_modules
 dist
 build
 api
+data/expenses.json
+data/expenses.json.tmp
