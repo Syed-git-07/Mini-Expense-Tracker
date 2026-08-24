@@ -1,8 +1,19 @@
 pipeline {
     agent any
 
-    stages {
+    options {
+        skipDefaultCheckout(true)
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
 
+    environment {
+        CI = 'true'
+        PORT = '4000'
+    }
+
+    stages {
         stage('Checkout') {
             steps {
                 checkout scm
@@ -11,13 +22,12 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                bat 'call npm ci || call npm install'
+                bat 'call npm ci --no-audit --no-fund'
             }
         }
 
         stage('Quality Checks') {
             parallel {
-
                 stage('Lint') {
                     steps {
                         bat 'call npm run lint'
@@ -38,32 +48,76 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Archive') {
             steps {
-                bat '''
-                    if not exist "C:\\ProgramData\\Jenkins\\.jenkins\\userContent\\expense-tracker" (
-                        mkdir "C:\\ProgramData\\Jenkins\\.jenkins\\userContent\\expense-tracker"
-                    )
-
-                    xcopy /E /I /Y "dist\\*" "C:\\ProgramData\\Jenkins\\.jenkins\\userContent\\expense-tracker\\"
-                '''
+                archiveArtifacts artifacts: 'dist/**', fingerprint: true
             }
         }
 
-        stage('Start Backend') {
+        stage('Start Application') {
             steps {
-                bat '''
-                    set JENKINS_NODE_COOKIE=dontKillMe
-                    start "" cmd /c "npm start"
-                '''
-            }
-        }
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    $pidFile = Join-Path $env:WORKSPACE 'expense-tracker.pid'
+                    $stdoutLog = Join-Path $env:WORKSPACE 'expense-tracker.out.log'
+                    $stderrLog = Join-Path $env:WORKSPACE 'expense-tracker.err.log'
 
-        stage('Run Frontend') {
-            steps {
-                bat '''
-                    set JENKINS_NODE_COOKIE=dontKillMe
-                    start "" cmd /c "npx serve -s dist -l 8081"
+                    if (Test-Path -LiteralPath $pidFile) {
+                        $previousPid = [int](Get-Content -Raw -LiteralPath $pidFile)
+                        $previousProcess = Get-Process -Id $previousPid -ErrorAction SilentlyContinue
+
+                        if ($previousProcess) {
+                            & taskkill.exe /PID $previousPid /T /F | Out-Null
+                        }
+
+                        Remove-Item -LiteralPath $pidFile -Force
+                    }
+
+                    $env:JENKINS_NODE_COOKIE = 'dontKillMe'
+                    $env:NODE_ENV = 'production'
+                    $application = Start-Process `
+                        -FilePath 'npm.cmd' `
+                        -ArgumentList 'start' `
+                        -WorkingDirectory $env:WORKSPACE `
+                        -RedirectStandardOutput $stdoutLog `
+                        -RedirectStandardError $stderrLog `
+                        -WindowStyle Hidden `
+                        -PassThru
+
+                    Set-Content -LiteralPath $pidFile -Value $application.Id
+
+                    $healthy = $false
+                    for ($attempt = 1; $attempt -le 15; $attempt++) {
+                        Start-Sleep -Seconds 2
+                        $application.Refresh()
+
+                        if ($application.HasExited) {
+                            if (Test-Path -LiteralPath $stderrLog) {
+                                Get-Content -LiteralPath $stderrLog
+                            }
+                            throw "Application exited before becoming healthy. Exit code: $($application.ExitCode)"
+                        }
+
+                        try {
+                            $response = Invoke-RestMethod `
+                                -Uri 'http://localhost:4000/api/health' `
+                                -TimeoutSec 5
+
+                            if ($response.status -eq 'ok') {
+                                $healthy = $true
+                                break
+                            }
+                        } catch {
+                            Write-Host "Health check attempt $attempt failed."
+                        }
+                    }
+
+                    if (-not $healthy) {
+                        & taskkill.exe /PID $application.Id /T /F | Out-Null
+                        throw 'Application did not become healthy on port 4000.'
+                    }
+
+                    Write-Host 'Application is available at http://localhost:4000'
                 '''
             }
         }
@@ -72,11 +126,11 @@ pipeline {
     post {
         success {
             echo 'Expense Tracker pipeline executed successfully!'
-            echo 'Frontend: http://localhost:8081'
+            echo 'Website and API: http://localhost:4000'
         }
 
         failure {
-            echo 'Pipeline failed!'
+            echo 'Pipeline failed. Review the failed stage and application logs.'
         }
     }
 }
