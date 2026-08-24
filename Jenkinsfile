@@ -73,11 +73,28 @@ pipeline {
                         Remove-Item -LiteralPath $pidFile -Force
                     }
 
+                    $listeners = Get-NetTCPConnection `
+                        -LocalPort $env:PORT `
+                        -State Listen `
+                        -ErrorAction SilentlyContinue
+
+                    foreach ($listener in $listeners) {
+                        $owner = Get-CimInstance `
+                            -ClassName Win32_Process `
+                            -Filter "ProcessId = $($listener.OwningProcess)"
+
+                        if ($owner.Name -eq 'node.exe' -and $owner.CommandLine -match 'server\.js') {
+                            Stop-Process -Id $owner.ProcessId -Force
+                        } else {
+                            throw "Port $env:PORT is occupied by PID $($listener.OwningProcess)."
+                        }
+                    }
+
                     $env:JENKINS_NODE_COOKIE = 'dontKillMe'
                     $env:NODE_ENV = 'production'
                     $application = Start-Process `
-                        -FilePath 'npm.cmd' `
-                        -ArgumentList 'start' `
+                        -FilePath 'node.exe' `
+                        -ArgumentList 'server.js' `
                         -WorkingDirectory $env:WORKSPACE `
                         -RedirectStandardOutput $stdoutLog `
                         -RedirectStandardError $stderrLog `
