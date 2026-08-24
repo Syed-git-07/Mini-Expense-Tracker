@@ -1,25 +1,5 @@
-def runCommand(String command) {
-    if (isUnix()) {
-        sh command
-    } else {
-        bat command
-    }
-}
-
 pipeline {
     agent any
-
-    options {
-        skipDefaultCheckout(true)
-        timestamps()
-        disableConcurrentBuilds()
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-    }
-
-    environment {
-        CI = 'true'
-        NODE_ENV = 'development'
-    }
 
     stages {
 
@@ -31,11 +11,7 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                script {
-                    runCommand('node --version')
-                    runCommand('npm --version')
-                    runCommand('call npm ci || call npm install')
-                }
+                bat 'call npm ci || call npm install'
             }
         }
 
@@ -44,17 +20,13 @@ pipeline {
 
                 stage('Lint') {
                     steps {
-                        script {
-                            runCommand('call npm run lint')
-                        }
+                        bat 'call npm run lint'
                     }
                 }
 
                 stage('API Tests') {
                     steps {
-                        script {
-                            runCommand('call npm test')
-                        }
+                        bat 'call npm test'
                     }
                 }
             }
@@ -62,15 +34,7 @@ pipeline {
 
         stage('Build Application') {
             steps {
-                script {
-                    runCommand('call npm run build')
-                }
-            }
-        }
-
-        stage('Archive') {
-            steps {
-                archiveArtifacts artifacts: 'dist/**', fingerprint: true
+                bat 'call npm run build'
             }
         }
 
@@ -86,7 +50,16 @@ pipeline {
             }
         }
 
-        stage('Run Website') {
+        stage('Start Backend') {
+            steps {
+                bat '''
+                    set JENKINS_NODE_COOKIE=dontKillMe
+                    start "" cmd /c "npm start"
+                '''
+            }
+        }
+
+        stage('Run Frontend') {
             steps {
                 bat '''
                     set JENKINS_NODE_COOKIE=dontKillMe
@@ -99,15 +72,11 @@ pipeline {
     post {
         success {
             echo 'Expense Tracker pipeline executed successfully!'
-            echo 'Website URL: http://localhost:8081'
+            echo 'Frontend: http://localhost:8081'
         }
 
         failure {
-            echo 'Pipeline failed! Review the failed stage output above.'
-        }
-
-        always {
-            echo 'Pipeline execution completed.'
+            echo 'Pipeline failed!'
         }
     }
 }
