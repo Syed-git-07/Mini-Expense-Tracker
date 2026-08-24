@@ -10,6 +10,7 @@ pipeline {
     agent any
 
     options {
+        skipDefaultCheckout(true)
         timestamps()
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
@@ -37,7 +38,7 @@ pipeline {
             }
         }
 
-        stage('Quality checks') {
+        stage('Quality Checks') {
             parallel {
                 stage('Lint') {
                     steps {
@@ -47,7 +48,7 @@ pipeline {
                     }
                 }
 
-                stage('API tests') {
+                stage('API Tests') {
                     steps {
                         script {
                             runCommand('npm test')
