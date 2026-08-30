@@ -83,7 +83,7 @@ pipeline {
                             -ClassName Win32_Process `
                             -Filter "ProcessId = $($listener.OwningProcess)"
 
-                        if ($owner.Name -eq 'node.exe' -and $owner.CommandLine -match 'server\.js') {
+                        if ($owner.Name -eq 'node.exe' -and $owner.CommandLine -match 'server[.]js') {
                             Stop-Process -Id $owner.ProcessId -Force
                         } else {
                             throw "Port $env:PORT is occupied by PID $($listener.OwningProcess)."
